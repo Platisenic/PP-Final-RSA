@@ -4,10 +4,13 @@ import subprocess
 
 r = remote('libos446.duckdns.org', 10001)
 n = r.recvline().decode()
+print(n, end='')
 n = int(n[n.find('= ')+2:])
 e = r.recvline().decode()
+print(e, end='')
 e = int(e[e.find('= ')+2:])
 enc = r.recvline().decode()
+print(enc, end='')
 enc = int(enc[enc.find('= ')+2:])
 
 subprocess.run(['make', '-C', 'dixon'])
@@ -24,7 +27,8 @@ d = pow(e, -1, phi)
 m = pow(enc, d, n)
 m = long_to_bytes(m).decode('ascii', errors='ignore')
 m = m[:m.find('}')+1]
-r.recvuntil(b'?')
+msg = r.recvuntil(b'?').decode()
+print(msg)
 print(f'The flag is:{m}')
 r.sendline(m.encode('ascii'))
 msg = r.recvline().decode()
