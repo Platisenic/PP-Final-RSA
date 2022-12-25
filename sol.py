@@ -1,0 +1,32 @@
+from pwn import *
+from Crypto.Util.number import long_to_bytes
+import subprocess
+
+r = remote('libos446.duckdns.org', 10001)
+n = r.recvline().decode()
+n = int(n[n.find('= ')+2:])
+e = r.recvline().decode()
+e = int(e[e.find('= ')+2:])
+enc = r.recvline().decode()
+enc = int(enc[enc.find('= ')+2:])
+
+subprocess.run(['make', '-C', 'dixon'])
+
+# io = process(['./dixon/dixon', f'{n}'])
+io = process(['./dixon/dixon_omp', f'{n}', '12'])
+pq = io.recvline().decode().split()
+p = int(pq[0])
+q = int(pq[1])
+assert p * q == n, "Dixen Computation Error"
+
+phi = (p - 1) * (q - 1)
+d = pow(e, -1, phi)
+m = pow(enc, d, n)
+m = long_to_bytes(m).decode('ascii', errors='ignore')
+m = m[:m.find('}')+1]
+r.recvuntil(b'?')
+print(f'The flag is:{m}')
+r.sendline(m.encode('ascii'))
+msg = r.recvline().decode()
+print(msg)
+
