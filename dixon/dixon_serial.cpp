@@ -88,7 +88,7 @@ int main(int argc,char** argv){
     }while(a % n == b % n || a % n == (- b) % n + n);
     double conduct_time = CycleTimer::currentSeconds()-start;
     mpz_class factor = gcd(b-a,n);
-    cout<<n<<" "<<factor<<" "<<n/factor<<" "<<factor*(n/factor)<<endl;
+    cout<<factor<<" "<<n/factor<<" "<<factor*(n/factor)<<endl;
     printf("time : %f \n",conduct_time);
 
 }

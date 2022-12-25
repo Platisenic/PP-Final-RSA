@@ -14,6 +14,10 @@ using namespace std;
 int main(int argc,char** argv){
     
     string num = argv[1];
+    int thread_count;
+
+    if(argc>2) thread_count = atoi(argv[2]);
+    else   thread_count = omp_get_max_threads();
     mpz_class n (num);
     int factorBase[] = {2,3,5,7};
     size_t size = sizeof(factorBase) / sizeof(factorBase[0]);
@@ -21,8 +25,7 @@ int main(int argc,char** argv){
     vector<vector<uint32_t>> smoothFactors;
     const mpz_class sqrtN = sqrt(n);
     uint32_t interval = 1000;
-    int thread_count = omp_get_max_threads();
-    printf("thread %d\n",thread_count);
+    
     omp_lock_t lck;
     omp_init_lock(&lck);
     double start = CycleTimer::currentSeconds();
@@ -95,7 +98,7 @@ int main(int argc,char** argv){
     }while(a % n == b % n || a % n == (- b) % n + n);
     double conduct_time = CycleTimer::currentSeconds()-start;
     mpz_class factor = gcd(b-a,n);
-    cout<<n<<" "<<factor<<" "<<n/factor<<" "<<factor*(n/factor)<<endl;
+    cout<<factor<<" "<<n/factor<<" "<<factor*(n/factor)<<endl;
     printf("time : %f \n",conduct_time);
 
 }
