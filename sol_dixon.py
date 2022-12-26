@@ -15,12 +15,11 @@ enc = int(enc[enc.find('= ')+2:])
 
 subprocess.run(['make', '-C', 'dixon'])
 
-# io = process(['./dixon/dixon', f'{n}'])
 io = process(['./dixon/dixon_omp', f'{n}', '12'])
 pq = io.recvline().decode().split()
 p = int(pq[0])
 q = int(pq[1])
-assert p * q == n, "Dixen Computation Error"
+assert p * q == n, "Dixon Computation Error"
 
 phi = (p - 1) * (q - 1)
 d = pow(e, -1, phi)
