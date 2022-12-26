@@ -1,6 +1,6 @@
 CXXFLAGS=-O2 -std=gnu++0x -Wall -pedantic
 LDFLAGS=-O2
-LIBS=-lgmpxx -lgmp
+LIBS=-lgmpxx -lgmp -lpthread
 
 all: quadratic
 
