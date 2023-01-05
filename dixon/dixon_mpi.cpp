@@ -52,24 +52,19 @@ void QS(string str){
     vector<vector<uint32_t>> smoothFactors;
 
     if(world_rank==0){
-        // cin>>N;
-        // str = N.get_str();
         buf = strdup(str.data());
         N_c = strlen(buf);
-        // cout<<"nc: "<<N_c<<endl;
         for(int i=1;i<world_size;i++){
             MPI_Send(&N_c,1,MPI_INT,i,0,MPI_COMM_WORLD);
             MPI_Send(buf,N_c,MPI_CHAR,i,0,MPI_COMM_WORLD); //dest,tag
         }
         N = buf;
-        printf("%s\n",buf);
 
     }else{
         MPI_Recv(&N_c,1,MPI_INT,0,0,MPI_COMM_WORLD,&status);
         buf = (char*)calloc(N_c,sizeof(char));
         MPI_Recv(buf,N_c,MPI_CHAR,0,0,MPI_COMM_WORLD,&status);
         N = buf;
-        // cout<<"rank : "<<world_rank<<"N "<<N<<endl;
     }
     const float logN = mpz_sizeinbase(N.get_mpz_t(), 2) * std::log(2); // Approx.
     const float loglogN = std::log(logN);
@@ -79,7 +74,6 @@ void QS(string str){
     const uint32_t B = MINIMAL_BOUND + std::ceil(std::exp(0.55*std::sqrt(logN * loglogN)));
     vector<uint32_t> factorBase = generateFactorBase(N,B);
     int* count;
-    // printf("rank: %d size : %lu\n",world_rank,factorBase.size());
     count = (int*)calloc(world_size,sizeof(int));
     uint32_t intervalStart = world_rank*INTERVAL_LENGTH;
     int endSign = 0;
@@ -87,15 +81,14 @@ void QS(string str){
     int tims=0;
     uint32_t* smoothNum;
     uint32_t* factorNum;
-    // printf("rank %d intervalStart %u\n",world_rank,intervalStart);
     if(world_rank==0){
-        // cout<<"rank 0"<<factorBase.size()<<endl;
         int nowCount = 0;
+        int whiletimes =0;
         while(sumCount<factorBase.size()+20){
-            // printf("rank %d sumCount :%d\n",world_rank,sumCount);
+            whiletimes++;
             uint32_t a,i;
             for(i=0,a=intervalStart;i<INTERVAL_LENGTH;i++,a++){
-                mpz_class z_square = ((a+sqrtN)*(a+sqrtN))-N; 
+                mpz_class z_square = ((a+sqrtN)*(a+sqrtN))%N; 
                 vector<uint32_t> factors;
                 for(uint32_t j=0;j<factorBase.size();j++){
                     const int p = factorBase[j];
@@ -118,11 +111,8 @@ void QS(string str){
             if(sumCount>=factorBase.size()+20)  endSign = 1;
             for(int i=1;i<world_size;i++)  
                 MPI_Send(&endSign,1,MPI_INT,i,2,MPI_COMM_WORLD);//tag 2
-            // cout<<"rank "<<world_rank<<" intervalStart "<<intervalStart<<endl;            
             intervalStart += INTERVAL_LENGTH*world_size;
-            // printf("rank 0 intervalStart %u\n",intervalStart);
         }
-        // printf("rank %d sumCount %ld\n",world_rank,smooth.size());
         // receive smooth size , soomth member;
         int smoothSize=0; //client smooth size
         for(int i=1;i<world_size;i++){
@@ -130,12 +120,10 @@ void QS(string str){
             smoothNum = (unsigned int*)calloc(smoothSize,sizeof(unsigned int));
             MPI_Recv(smoothNum,smoothSize,MPI_UNSIGNED,i,4,MPI_COMM_WORLD,&status);
             for(int j=0;j<smoothSize;j++){
-                // if(smooth.size()<factorBase.size()+20) 
                 smooth.push_back(smoothNum[j]);
             }
             int factorMaxSize=0;
             MPI_Recv(&factorMaxSize,1,MPI_INT,i,5,MPI_COMM_WORLD,&status);//recv factormax size
-            // printf("recv rank %d smoothSize %d factorMaxsize %d\n",i,smoothSize,factorMaxSize);
             factorNum = (unsigned int*)calloc(factorMaxSize,sizeof(unsigned int)); //
             for(int k=0;k<smoothSize;k++){ //receive smooth factors
                 memset(factorNum,0,factorMaxSize);
@@ -148,13 +136,9 @@ void QS(string str){
                     factors.push_back(factorNum[s]);
                     if(factorNum[s])non_zero = true;
                 }
-                // if(smoothFactors.size()<factorBase.size()+20)
                 smoothFactors.push_back(factors);
-                // printf("recv rank %d factorNum %d th size %lu\n",i,k,factors.size());
             }
         }
-        // printf("all smooth Size %ld factorSize %ld\n",smooth.size(),smoothFactors.size());
-        // printf("rank %d sumCount %ld\n",world_rank,smooth.size());
     }else{
         while(!endSign){
             uint32_t a,i;
@@ -176,42 +160,32 @@ void QS(string str){
             count[world_rank] = smooth.size();
             MPI_Send(&count[world_rank],1,MPI_INT,0,1,MPI_COMM_WORLD);
             MPI_Recv(&endSign,1,MPI_INT,0,2,MPI_COMM_WORLD,&status);
-            // cout<<"rank "<<world_rank<<" intervalStart "<<intervalStart<<endl;            
             intervalStart += INTERVAL_LENGTH*world_size;   
         }
         int smoothSize=0;
         for(auto i:smoothFactors){
             if(i.size()>smoothSize) smoothSize = i.size();
         }
-        // printf("rank %d intervalStart %u endSign %d smoothSize %ld smoothfactorsize %d\n",
-        //     world_rank,intervalStart,endSign,smooth.size(),smoothSize);
         int smoothLen = smooth.size();
         MPI_Send(&smoothLen,1,MPI_INT,0,3,MPI_COMM_WORLD);
         smoothNum = (unsigned int*)calloc(smoothLen,sizeof(unsigned int));
         for(int i=0;i<smoothLen;i++) smoothNum[i] = smooth[i];
         MPI_Send(smoothNum,smoothLen,MPI_UNSIGNED,0,4,MPI_COMM_WORLD); //smooth number
-        // printf("send rank %d smoothSize %d\n",world_rank,smoothSize);
         MPI_Send(&smoothSize,1,MPI_INT,0,5,MPI_COMM_WORLD);//send factorMax size
         factorNum  = (unsigned int*)calloc(smoothSize,sizeof(unsigned int)); //factorMax size
-        // printf("rank %d  smoothsize %d\n",world_rank,smoothLen,smoothFactors.size());
         for(int i=0;i<smoothLen;i++){ // all smooth
             memset(factorNum,0,smoothSize);
             for(int j=0;j<smoothSize;j++){
                 if(j<smoothFactors[i].size()) factorNum[j] = smoothFactors[i][j];
                 else factorNum[j] = 0;
-                // cout<<factorNum[j]<<" ";
             }
-            // cout<<endl;
             MPI_Send(factorNum,smoothSize,MPI_UNSIGNED,0,6,MPI_COMM_WORLD);//send factors
-            // printf("Send rank %d factorNum %d th size %lu maxSize %d\n",world_rank,i,smoothFactors[i].size(),smoothSize);
         }
         
     }
     if(world_rank==0){
-        // cout<<"smooth size"<<smooth.size()<<" "<<smoothFactors.size()<<endl;
         Matrix M(factorBase.size(),smoothFactors.size()+1);
         for(int i=0;i<smoothFactors.size();i++){
-            // cout<<"smooth factors : "<<smoothFactors[i].size()<<endl;
             for(int j=0;j<smoothFactors[i].size();j++){
                 M(smoothFactors[i][j],i).flip();//
             }
@@ -221,10 +195,7 @@ void QS(string str){
         mpz_class b;
         do {
             vector<uint32_t> x = M.solve();
-            // for(auto ss:x){
-            //     cout<<ss<<" ";
-            // }
-            // cout<<endl;
+            // for(auendl;
             a = 1;
             b = 1;
             vector<uint32_t> decomp(factorBase.size(),0);
@@ -254,7 +225,6 @@ int main(int argc,char** argv){
     int world_rank;
     MPI_Comm_size(MPI_COMM_WORLD,&world_size);
     MPI_Comm_rank(MPI_COMM_WORLD,&world_rank);
-    // double start = CycleTimer::currentSeconds();
     double start = MPI_Wtime();
     string buf="";
     if(world_rank==0){
@@ -263,7 +233,7 @@ int main(int argc,char** argv){
     QS(buf);
     // double conduct_time = CycleTimer::currentSeconds()-start;
     double conduct_time = MPI_Wtime()-start;
-    printf("time : %f\n",conduct_time);
+    if(world_rank==0)    printf("time : %f\n",conduct_time);
     MPI_Finalize();
     return 0;
 }

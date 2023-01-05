@@ -1,9 +1,9 @@
 CXX = g++
 MPIXX= mpicxx
-LDL = -lgmpxx -lgmp
+LDL = -lgmpxx -lgmp -O3
 CV = c++17
-OMP = -fopenmp -O3
-all: dixon dixon_omp dixon_mpi
+OMP = -fopenmp
+all: dixon dixon_omp dixon_mpi 
 
 dixon: dixon_serial.cpp
 	$(CXX) -o $@ $< $(LDL)
