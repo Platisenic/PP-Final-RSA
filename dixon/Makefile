@@ -13,3 +13,5 @@ dixon_mpi: dixon_mpi.cpp
 	$(MPIXX) -std=c++11 -o $@ $< $(LDL)
 clean:
 	rm -rf dixon dixon_omp dixon_mpi
+run_mpi: dixon_mpi
+	 mpirun -mca btl_tcp_if_include 192.168.2.0/24 -np 36  --hostfile hosts dixon_mpi  622955649784207776129637054061200033
